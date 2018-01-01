@@ -1,4 +1,6 @@
 
+
+
 SELECT a.*, b.*, 
 
 (greatest(a.average,b.humu_average) - LEAST( a.average, b.humu_average))/ replace(greatest(a.average,b.humu_average), 0,1) diff FROM  
@@ -8,7 +10,7 @@ SELECT a.*, b.*,
   
   (SELECT smut.service_id,
          SUM(smut.amount)/ REPLACE(sum(1+ trunc(last_day(smut.month_year)) - TRUNC(smut.month_year)), 0,1) average
-  FROM service_monthly_usage_test smut
+  FROM test_service_monthly_usage smut
   GROUP BY smut.service_id)a
 JOIN
 (SELECT SUM(humuFiltered.total_usage_amount) / REPLACE(SUM(days) ,0,1)humu_average,
