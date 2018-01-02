@@ -229,12 +229,6 @@ CREATE OR REPLACE PACKAGE BODY usage
           
             LOOP
               --(loop 3) loops through all billing cycles that overlap current monthYear for current sServiceId
-              --IF nRemainderDays = 0 THEN
-              --1.EITHER this is the first time inside this loop for this serviceId (for '00')
-              --2.OR the current billing cycle (i.e. current recHUMU ('00')) starts on the 1st of the month
-              --3.OR the current billing cycle ('00') starts in middle of the month AND
-              --   3a.EITHER there was no bill ('00') for the earlier part of the month 
-              --   3b.OR it has already been calculated 
             
             
             
@@ -328,10 +322,10 @@ CREATE OR REPLACE PACKAGE BODY usage
             ELSE
               IF nAccumulatedDays < nDaysInMonth THEN
                 sSourceOfCalculation := 'PARTIAL_MONTH';
+                nAccumulatedAmount   := nDaysInMonth * nAvgDailyUsage;
               ELSE
                 sSourceOfCalculation := 'ERROR:TOO_MANY_DAYS';
               END IF;
-              nAccumulatedAmount := nDaysInMonth * nAvgDailyUsage;
             END IF;
           ELSE
             --dNewMonthYear = dMonthYear
