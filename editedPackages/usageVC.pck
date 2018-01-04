@@ -66,7 +66,7 @@ CREATE OR REPLACE PACKAGE BODY usage
   */
   PROCEDURE CREATE_MONTHLY_USAGE_YB_NEW IS
     sDefaultServiceType settings.service_class_default%TYPE;
-    --i                   NUMBER;
+    i                   NUMBER;
   
   
     /*variables of values to insert into service_monthly_usage*/
@@ -145,10 +145,11 @@ CREATE OR REPLACE PACKAGE BODY usage
     overlappingUtlsLst utlIdList;
     nAdjustment        NUMBER;
     dRemainderEndDate  recHUMU.End_Date%TYPE; --amount of days that billing end date 
+    dPrevEndDateACTUAL recHUMU.End_Date%TYPE; --saves actual end date before adjustment
   
   BEGIN
   
-    --i          := 1;
+    i          := 1;
     sEnteredBy := 'CREATE_MONTHLY_USAGE_YB_NEW';
   
   
@@ -184,12 +185,12 @@ CREATE OR REPLACE PACKAGE BODY usage
     LOOP
       --(loop 1) loops through each relevant serviceId
       EXIT WHEN curHUMU%NOTFOUND;
-      --i := i + 1;
+      i := i + 1;
       --EXIT WHEN i = 5000;
     
       INSERT INTO debug_log
       VALUES
-        (614, sEnteredBy, recHUMU.Service_Id, SYSDATE, 'YB', NULL);
+        (615 + i, sEnteredBy, recHUMU.Service_Id, SYSDATE, 'YB', NULL);
     
       /*Reset nAvgBillUsage to NULL for each new serviceId */
       nAvgBillUsage      := NULL;
@@ -230,6 +231,15 @@ CREATE OR REPLACE PACKAGE BODY usage
             LOOP
               --(loop 3) loops through all billing cycles that overlap current monthYear for current sServiceId
             
+              CASE dPrevEndDateACTUAL
+                WHEN recHUMU.Start_Date THEN
+                  nAdjustment := 1;
+                WHEN recHUMU.Start_Date - 1 THEN
+                  nAdjustment := 0;
+                ELSE
+                  nAdjustment := nAdjustment;
+              END CASE;
+            
             
             
             
@@ -259,7 +269,8 @@ CREATE OR REPLACE PACKAGE BODY usage
               *(BUT ONLY for billing cycles that do not have the same end date as start date --DISREGARD because curHUMU has been updated to "WHERE humu.end_date > humu.start_date) 
               */
               --IF dEndDate > dStartDate THEN
-              dEndDate := dEndDate - nAdjustment;
+              dPrevEndDateACTUAL := dEndDate;
+              dEndDate           := dEndDate - nAdjustment;
               --END IF;
             
             
@@ -406,15 +417,23 @@ CREATE OR REPLACE PACKAGE BODY usage
           nAccumulatedAmount := 0;
         
         
-          /* when recHUMU.Humuservice_Id <> nServiceId then we are dealing with a new serviceId so exit this loop 
-          OR */
-          EXIT WHEN recHUMU.service_Id <> nServiceId OR dMonthYear >= SYSDATE;
         
-          /* if we didn't exit and we are still in this loop then we are still in the same serviceId
-          so we add_months() to move on to next month */
+        
+          /*  add_months() to move on to next month */
           dMonthYear   := add_months(dMonthYear, 1);
-          dLastOfMonth := last_day(dMonthYear); -- subsequently it is done near the end of loop 2.   
+          dLastOfMonth := last_day(dMonthYear);
           nDaysInMonth := dLastOfMonth - (dMonthYear - 1);
+        
+          IF dMonthYear >= SYSDATE THEN
+            --in case there are records past sysdate
+            WHILE recHUMU.service_Id = nServiceId LOOP
+              FETCH curHUMU
+                INTO recHUMU;
+              EXIT WHEN curHUMU%NOTFOUND;
+            END LOOP;
+          END IF;
+        
+          EXIT WHEN dMonthYear >= SYSDATE;
         
         END LOOP; --(loop 2) end of loop that loops through each yearMonth that overlapps at least a partial billing cycle (of current serviceId)
         COMMIT;
