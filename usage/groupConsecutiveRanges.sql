@@ -64,9 +64,9 @@ grp_adjusted AS
             WHEN ROWNUM = MAX(ROWNUM)
              OVER(PARTITION BY grp) AND
                  (end_date - start_date) *
-                 (LEAST(last_day(start_date + 1), end_date) - start_date) > 0 THEN
+                 (LEAST(last_day(start_date) + 1, end_date) - start_date) > 0 THEN
              total_usage_amount / (end_date - start_date) *
-             (LEAST(last_day(start_date + 1), end_date) - start_date)
+             (LEAST(last_day(start_date) + 1, end_date) - start_date)
             ELSE
              total_usage_amount
           END adjusted_usage_amount,
@@ -83,7 +83,7 @@ grouped_grp AS
          grp
   FROM   grp_adjusted
   GROUP  BY grp
-  HAVING COUNT(*) > 12),
+  HAVING COUNT(*) > 4),
 joined AS
 --here the grouped_grp results are joined with the Test_Service_Monthly_Usage tsmu on service_id = service_id
 --AND month_year BETWEEN a_start_date AND a_end_date
@@ -107,7 +107,7 @@ joined AS
 --A number 1 means they are 100% the same, 1.05 or .95 means taht one = 95% of the other
 SELECT joined.*, tsmu_amount / DECODE(hu_usage, 0, 1, hu_usage) dif
 FROM   joined
-ORDER  BY dif DESC;
+ORDER  BY dif ASC;
 
 ----------------------------------------------------------------
 --single account ungrouped
@@ -161,7 +161,7 @@ grp AS
             WHEN ROWNUM = MIN(ROWNUM) OVER(PARTITION BY grp) THEN
              (end_date - GREATEST(start_date, TRUNC(end_date, 'mon')))
             WHEN ROWNUM = MAX(ROWNUM) OVER(PARTITION BY grp) THEN
-             (LEAST(last_day(start_date + 1), end_date) - start_date)
+             (LEAST(last_day(start_date) + 1, end_date) - start_date)
             ELSE
              end_date - start_date
           END adjusted_days,
@@ -175,9 +175,9 @@ grp AS
             WHEN ROWNUM = MAX(ROWNUM)
              OVER(PARTITION BY grp) AND
                  (end_date - start_date) *
-                 (LEAST(last_day(start_date + 1), end_date) - start_date) > 0 THEN
+                 (LEAST(last_day(start_date) + 1, end_date) - start_date) > 0 THEN
              total_usage_amount / (end_date - start_date) *
-             (LEAST(last_day(start_date + 1), end_date) - start_date)
+             (LEAST(last_day(start_date)+ 1, end_date) - start_date)
             ELSE
              total_usage_amount
           END adjusted_usage_amount,
